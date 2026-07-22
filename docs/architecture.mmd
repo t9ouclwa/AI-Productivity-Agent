@@ -1,12 +1,20 @@
 flowchart LR
-    User["User"] --> Interface["User Interface"]
-    Interface --> AgentCore["Agent Core"]
-    AgentCore --> Planner["Task Planner"]
-    AgentCore --> Memory["Project Context / Memory"]
-    AgentCore --> Tools["Tool Layer"]
-    Tools --> Documents["Documents"]
-    Tools --> Repositories["Repositories"]
-    Tools --> ExternalAPIs["External APIs"]
-    Planner --> Outputs["Structured Outputs"]
-    Memory --> Outputs
-    Outputs --> User
+    User["User on Telegram"] --> Telegram["Telegram Bot Interface"]
+    Telegram --> Bot["DOCTOR Bot Core"]
+
+    Bot --> Context["Conversation Context"]
+    Bot --> LLM["Claude CLI Adapter"]
+    Bot --> Vault["Obsidian / Markdown Vault"]
+    Bot --> Jobs["Local Job Queue"]
+    Bot --> Gmail["Gmail Read-Only Client"]
+    Bot --> Media["Image / Document Handler"]
+
+    LLM --> Replies["Chat Replies and Summaries"]
+    Vault --> Notes["Notes, Todos, Memory, Life Events"]
+    Jobs --> Reminders["Reminders, Check-ins, Quiet Follow-ups"]
+    Gmail --> MailSummary["Unread Mail Summaries"]
+    Media --> ImageUnderstanding["Image Understanding"]
+
+    Replies --> Telegram
+    Reminders --> Telegram
+    MailSummary --> Telegram

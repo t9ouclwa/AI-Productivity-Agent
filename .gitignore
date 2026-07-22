@@ -6,6 +6,17 @@ Thumbs.db
 .env
 .env.*
 !.env.example
+credentials.json
+token.json
+.chat_id
+.chat_history.json
+.relationship_state.json
+.reminders_state.json
+.checkin_state.json
+.spark_state.json
+.gmail_state.json
+media_inbox/
+doctor.log
 
 # Python
 __pycache__/
