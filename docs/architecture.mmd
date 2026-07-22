@@ -1,0 +1,12 @@
+flowchart LR
+    User["User"] --> Interface["User Interface"]
+    Interface --> AgentCore["Agent Core"]
+    AgentCore --> Planner["Task Planner"]
+    AgentCore --> Memory["Project Context / Memory"]
+    AgentCore --> Tools["Tool Layer"]
+    Tools --> Documents["Documents"]
+    Tools --> Repositories["Repositories"]
+    Tools --> ExternalAPIs["External APIs"]
+    Planner --> Outputs["Structured Outputs"]
+    Memory --> Outputs
+    Outputs --> User
