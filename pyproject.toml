@@ -1,0 +1,7 @@
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+
+[tool.coverage.run]
+source = ["bot", "gmail_client", "llm", "prompts", "vault"]
+omit = ["tests/*"]

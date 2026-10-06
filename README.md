@@ -1,43 +1,36 @@
 # DOCTOR
 
-DOCTOR is a personal AI productivity companion built as a Telegram bot. It combines conversational assistance, Obsidian-compatible memory, reminders, Gmail unread-message summaries, and proactive check-ins into one lightweight local automation system.
+[![CI](https://github.com/Tyouclwannie/AI-Productivity-Agent/actions/workflows/ci.yml/badge.svg)](https://github.com/Tyouclwannie/AI-Productivity-Agent/actions/workflows/ci.yml)
+[![Python 3.11+](https://img.shields.io/badge/Python-3.11%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-This repository presents DOCTOR as an AI internship portfolio project. The documentation focuses on system design, agent behavior, safety boundaries, and practical user workflows without exposing private credentials, chat history, or personal vault content.
+DOCTOR is a local-first AI productivity companion delivered through Telegram. It combines conversational assistance, an Obsidian-compatible Markdown memory, deterministic reminders, read-only Gmail summaries, image understanding, and proactive check-ins in one inspectable Python application.
 
-## Project Overview
+The project is both a runnable reference implementation and an AI engineering portfolio project. It focuses on a practical question: how can a personal agent remember useful context and act later without turning every future action into an unverifiable model promise?
 
-DOCTOR is designed for day-to-day personal productivity rather than one-off chatbot replies. The bot receives messages through Telegram, keeps short conversational context, writes useful events into a Markdown vault, answers questions from local notes, and schedules follow-up actions through a local job queue.
+## Highlights
 
-The project explores how an AI agent can move beyond simple request-response interaction into persistent support:
+- **Telegram interface** for conversational and command-based workflows
+- **Claude CLI bridge** for chat, grounded note answers, web-enabled prompts, and image interpretation
+- **Local Markdown memory** that remains readable and editable in Obsidian
+- **Persistent reminders** with one-time and daily schedules restored after restart
+- **Quiet-until follow-ups** that pair interruption suppression with a deterministic wake-up job
+- **Proactive safety gates** for opt-in state, quiet windows, idle time, cooldown, pending input, and repetition
+- **Read-only Gmail summaries** using the `gmail.readonly` OAuth scope
+- **Interrupt-aware conversation batching** when a user sends additional context while a reply is being generated
+- **Synthetic tests and CI** that exercise parsing and local state without contacting external services
 
-- remembering useful context across conversations
-- converting natural-language requests into reminders or todos
-- summarizing unread Gmail messages with a read-only OAuth scope
-- checking in proactively while respecting quiet periods
-- keeping human-readable notes in an Obsidian-compatible vault
+## Why it is different from a basic chatbot
 
-## Motivation
+DOCTOR separates language-model reasoning from actions that require reliability.
 
-Many productivity assistants are either too manual or too opaque. DOCTOR was built to test a more personal and inspectable pattern: a small local agent that can chat naturally, keep useful records, and act later through deterministic scheduled jobs.
-
-The core design goal is reliability. For future actions such as reminders, DOCTOR does not rely only on a model promise. It stores reminder state, restores scheduled jobs at startup, and separates quiet periods from ordinary recurring calendar facts.
-
-## Features
-
-- **Telegram chat interface** for natural conversation and command-based workflows
-- **Claude CLI integration** for conversational responses, note-based answers, web-enabled prompts, and image interpretation
-- **Obsidian-compatible Markdown vault** for notes, todos, words, life events, and project context
-- **Memory layer** with editable long-term memory and user profile files
-- **Reminder system** supporting one-time reminders and daily recurring reminders
-- **Quiet-until handling** that pauses proactive messages and schedules a follow-up when the quiet window ends
-- **Proactive check-ins and memory-driven spark messages** with local skip gates for quiet state, cooldown, and recent context
-- **Gmail unread summaries** using the Gmail API with read-only access
-- **Image/document message handling** for Telegram media inputs
-- **Todo extraction and completion helpers** for lightweight task tracking
+- The model can interpret a request, but Python code parses and registers reminders.
+- A model response alone never proves that a reminder exists; scheduler state is persisted and restored.
+- Proactive messages are considered only after deterministic local gates pass.
+- Personal context stays in local Markdown and small local state files.
+- Gmail access is read-only, and credentials are excluded from version control.
 
 ## Architecture
-
-The system is organized around a local Python Telegram bot, a job queue, a Claude CLI bridge, and a Markdown vault.
 
 ```mermaid
 flowchart LR
@@ -64,104 +57,161 @@ flowchart LR
 
 The standalone Mermaid source is available in [`docs/architecture.mmd`](docs/architecture.mmd).
 
-## Core Workflows
+## Core workflows
 
-### Conversational Assistant
+### Conversational assistant
 
-Users can send normal Telegram messages. DOCTOR keeps recent context, generates a reply through the LLM layer, and records useful events into the vault when appropriate.
+Normal messages are buffered briefly so rapid follow-ups can be handled together. DOCTOR keeps a short local history, generates a response through Claude CLI, records useful context, and can regenerate a draft when the user interrupts with new information.
 
-### Note-Based Question Answering
+### Note-grounded answers
 
-The `/ask` command collects Markdown notes from the configured vault and asks the model to answer only from those notes. This keeps personal knowledge retrieval inspectable and grounded in local files.
+The `/ask` command collects Markdown from the configured vault and instructs the model to answer from those notes. This keeps retrieval inspectable: the source of truth is a folder of ordinary files, not an opaque hosted memory.
 
-### Reminders and Follow-Ups
+### Reminders and quiet periods
 
-DOCTOR parses natural-language reminder requests, creates scheduled jobs, persists reminder state, and restores active reminders on startup. It also supports daily recurring reminders.
+Natural-language reminders are parsed locally, persisted as JSON state, registered with the job queue, and restored on startup. Quiet-until requests also register a one-shot follow-up, so “do not interrupt me until later” does not silently become “never contact me again.”
 
-### Gmail Summary
+### Proactive support
 
-The Gmail integration reads unread messages from the last 14 days and formats metadata such as sender, subject, date, and snippet for model-assisted summarization. The OAuth scope is read-only.
+Check-ins and memory-driven sparks are opt-in. Local code checks quiet state, recent activity, cooldown, pending input, and repetition risk before asking the model whether a message is useful.
 
-### Proactive Support
+### Gmail summary
 
-The bot can run check-ins and spark-style proactive messages. Local gates check quiet windows, cooldowns, recent user activity, and repetition risk before the LLM is asked whether to send a message.
+The optional Gmail integration reads unread message metadata from the previous 14 days and asks the model for a compact priority summary. It cannot modify, send, archive, or delete mail.
+
+See [`docs/demo.md`](docs/demo.md) for sanitized synthetic examples.
+
+## Quick start
+
+### Requirements
+
+- Python 3.11+
+- A Telegram bot token
+- Claude Code installed and authenticated
+- A local directory for the Markdown vault
+
+### Install and run
+
+```bash
+git clone https://github.com/Tyouclwannie/AI-Productivity-Agent.git
+cd AI-Productivity-Agent
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install -r requirements.txt
+cp .env.example .env
+```
+
+Set `TELEGRAM_BOT_TOKEN` and an absolute `VAULT_DIR` in `.env`, then run:
+
+```bash
+./run.sh
+```
+
+The application intentionally fails closed when `VAULT_DIR` is missing instead of writing personal notes into the project directory.
+
+For Claude authentication, optional Gmail OAuth, local personality files, and verification steps, read the complete [setup guide](docs/setup.md).
 
 ## Commands
 
-Representative commands include:
+| Command | Purpose |
+|---|---|
+| `/ask <question>` | Answer from local Markdown notes |
+| `/word <word>` | Save a generated vocabulary card |
+| `/done [keyword]` | View or complete open todos |
+| `/remind <time> <text>` | Create a one-time or daily reminder |
+| `/gmail` | Summarize unread Gmail messages |
+| `/gmail_on`, `/gmail_off` | Toggle proactive Gmail checks |
+| `/checkin_on`, `/checkin_off` | Toggle proactive check-ins and sparks |
+| `/remember <text>`, `/memory` | Update or view editable memory |
+| `/profile`, `/profile_add <text>` | View or update local user profile context |
+| `/life` | Summarize recent locally recorded life events |
+| `/familiarity` | Show the current relationship/familiarity state |
+| `/reset_context` | Clear short conversation history |
 
-- `/ask` - answer a question from local Markdown notes
-- `/word` - save a vocabulary item
-- `/done` - view or complete open todos
-- `/remind` - create one-time or daily reminders
-- `/gmail` - summarize unread Gmail messages
-- `/gmail_on` and `/gmail_off` - enable or disable proactive Gmail checks
-- `/checkin_on` and `/checkin_off` - enable or disable proactive check-ins
-- `/remember` and `/memory` - write and view editable memory
-- `/profile` and `/profile_add` - view or update basic user profile context
-- `/life` - review recent life-event notes
-- `/reset_context` - clear recent conversational context
+Plain Telegram messages are handled as normal conversation and may be classified into todos, learning notes, experiment notes, or general inbox entries.
 
-## Tech Stack
+## Configuration
 
-- **Language:** Python
-- **Bot framework:** `python-telegram-bot` with job queue support
-- **LLM interface:** Claude CLI subprocess adapter
-- **Knowledge store:** Obsidian-compatible Markdown files
-- **Email integration:** Gmail API with read-only OAuth scope
-- **Google libraries:** `google-api-python-client`, `google-auth-oauthlib`, `google-auth-httplib2`
-- **Configuration:** `.env` via `python-dotenv`
-- **Japanese text dependency:** `fugashi`, `unidic-lite`
+All runtime settings are documented in [`.env.example`](.env.example). The most important values are:
 
-## Repository Structure
+| Variable | Required | Description |
+|---|---:|---|
+| `TELEGRAM_BOT_TOKEN` | Yes | Telegram bot credential |
+| `VAULT_DIR` | Yes | Absolute path to the local Markdown vault |
+| `CHAT_ID` | No | Destination for scheduled messages before a chat ID is learned |
+| `CLAUDE_BIN` | No | Claude CLI executable; defaults to `claude` |
+| `CLAUDE_MODEL` | No | Default lightweight model |
+| `VOICE_MODEL` | No | Model used for conversational, web, and image paths |
+
+DOCTOR also reads optional `persona.md`, `memory.md`, and `user_profile.md` files from `~/.config/doctor/`. Safe starter templates are provided under [`config/`](config/).
+
+## Repository structure
 
 ```text
 AI-Productivity-Agent/
+├── .github/workflows/ci.yml
+├── config/                    # Safe templates for local personality files
 ├── docs/
 │   ├── architecture.mmd
-│   └── screenshots/
-├── .gitignore
-├── LICENSE
-└── README.md
+│   ├── demo.md
+│   ├── setup.md
+│   └── screenshots/           # Reserved for reviewed, redacted media
+├── scripts/daily_push.py      # Optional scheduled todo digest
+├── tests/                     # Local parsing and persistence tests
+├── bot.py                     # Telegram handlers, scheduler, proactive gates
+├── gmail_client.py            # Read-only Gmail OAuth client
+├── llm.py                     # Claude CLI subprocess adapter
+├── prompts.py                 # Prompt construction and local personality loading
+├── vault.py                   # Markdown storage and todo/life-event helpers
+├── .env.example
+├── requirements.txt
+└── run.sh
 ```
 
-The current portfolio repository contains documentation only. Runtime credentials, tokens, personal chat logs, and private vault data are intentionally excluded.
+## Testing
 
-## Screenshots
+```bash
+python -m pip install -r requirements-dev.txt
+python -m compileall -q bot.py gmail_client.py llm.py prompts.py vault.py scripts
+python -m pytest
+```
 
-Screenshots should be added to [`docs/screenshots`](docs/screenshots) after private information has been removed.
+CI runs the compile and test checks on Python 3.11 and 3.13. Automated tests do not contact Telegram, Gmail, or Claude and do not require credentials.
 
-Suggested screenshots:
+## Privacy and security
 
-- Telegram command menu or help response
-- Reminder creation and reminder trigger
-- Obsidian Markdown note generated by the bot
-- Gmail unread-summary output with sensitive fields redacted
-- Example proactive check-in with private context removed
+DOCTOR is designed for a single-user local environment. The following must never be committed:
 
-## Privacy and Safety
+- `.env`, Telegram tokens, or chat IDs
+- Google OAuth `credentials.json` or `token.json`
+- chat history, reminder/check-in state, or downloaded Telegram media
+- customized files under `~/.config/doctor/`
+- private Obsidian vault content
+- screenshots containing real conversations, email addresses, or personal schedules
 
-DOCTOR is designed around local-first personal automation. The following files should not be committed:
+The repository includes defensive ignore rules, but staged changes should still be inspected before every commit. See [`SECURITY.md`](SECURITY.md) for the full boundary.
 
-- `.env`
-- `.chat_id`
-- `.chat_history.json`
-- `credentials.json`
-- `token.json`
-- local state files containing private activity or reminder data
-- private Obsidian vault contents
+## Current limitations
 
-The Gmail integration uses a read-only scope. Any screenshots or demos should be reviewed carefully before sharing.
+- The application assumes one local user and one running polling instance.
+- Natural-language time parsing focuses on common Chinese and Japanese expressions rather than a general calendar grammar.
+- External integrations require the host machine to remain awake, online, and authenticated.
+- Automated tests cover local logic; end-to-end Telegram, Claude, and Gmail checks require private credentials and must be run manually.
+- The default vault taxonomy and prompt language are opinionated for a Chinese/Japanese personal workflow.
 
-## Future Roadmap
+## Roadmap
 
-- Add a sanitized demo walkthrough
-- Add redacted screenshots for the main Telegram workflows
-- Add tests for reminder parsing, quiet-window parsing, and job restoration
-- Add a safer onboarding guide for local setup
-- Add configuration examples without secrets
-- Add optional packaging for local deployment
+- Add opt-in structured logging with automatic redaction
+- Add a first-run configuration validator and health-check command
+- Expand reminder parser fixtures across time zones and daylight-saving transitions
+- Add dependency and secret scanning to CI
+- Add reviewed screenshots or a short demo video using synthetic data
+- Package the bot as a managed local service for macOS and Linux
+
+## Contributing
+
+Contributions should preserve deterministic scheduling, local privacy boundaries, and read-only Gmail access. See [`CONTRIBUTING.md`](CONTRIBUTING.md).
 
 ## License
 
-This project is licensed under the MIT License. See [`LICENSE`](LICENSE) for details.
+This project is licensed under the [MIT License](LICENSE).
